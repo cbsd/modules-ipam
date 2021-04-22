@@ -1,0 +1,192 @@
+# CBSD ipam module function
+get_token()
+{
+	local _func="get_token"
+	local _ret _res
+	local _cmd="${CURL_CMD} --no-progress-meter -s -X POST --user ${USER}:${PASS} ${PHPIPAMURLAPI}/${APPID}/user/"
+
+	_res=$( ${_cmd} 2>/dev/null )
+	_ret=$?
+	if [ ${_ret} -ne 0 ]; then
+		${ECHO} "${N1_COLOR}${CBSD_APP} ${_func}: cmd failed: ${N2_COLOR}${_cmd}${N0_COLOR}" 1>&2
+		stderr ${_ret} "{_res}"
+	fi
+
+	PHP_IPAM_TOKEN=$( echo "${_res}" | ${JQ_CMD} '.data.token' | ${TR_CMD} -d '"' )
+	[ -z "${PHP_IPAM_TOKEN}" -o "${PHP_IPAM_TOKEN}" = "null" ] && stderr 1 "${N1_COLOR}${CBSD_APP} ${_func}: empty PHP_IPAM_TOKEN: ${N2_COLOR}${_cmd}${N0_COLOR}"
+
+	[ "${DEBUG}" = "1" ] && ${ECHO} "${N1_COLOR}${CBSD_APP} ${_func}: ${N2_COLOR}PHP_IPAM_TOKEN=${PHP_IPAM_TOKEN}${N0_COLOR}" 1>&2
+	return 0
+}
+
+get_subnet_id()
+{
+	local _func="get_subnet_id"
+	local _ret _res
+	local _cmd="${CURL_CMD} --no-progress-meter -S -X GET ${PHPIPAMURLAPI}/${APPID}/subnets/cidr/${subnet}/ --header 'token: ${PHP_IPAM_TOKEN}'"
+
+	[ -z "${PHP_IPAM_TOKEN}" ] && stderr 1 "${N1_COLOR}${CBSD_APP} ${_func}: empty ${N2_COLOR}PHP_IPAM_TOKEN${N0_COLOR}"
+
+	SUBNET_ID=$( eval ${_cmd} | ${JQ_CMD} '.data[0].id' | ${TR_CMD} -d '"' )
+
+	if [ -z "${SUBNET_ID}" -o "${SUBNET_ID}" = "null" ]; then
+		${ECHO} "${N1_COLOR}${CBSD_APP} ${_func}: no such subnet id for cidr: ${N2_COLOR}${subnet}${N0_COLOR}" 1>&2
+		stderr 1 "${N1_COLOR}${CBSD_APP} ${_func}: API query: ${N2_COLOR}${_cmd}${N0_COLOR}"
+	fi
+
+	# debug
+	[ "${DEBUG}" = "1" ] && ${ECHO} "${N1_COLOR}${CBSD_APP} ${_func}: ${N2_COLOR}SUBNET_ID=${SUBNET_ID}${N0_COLOR}" 1>&2
+	return 0
+}
+
+# optional:
+# note=""
+# description=""
+# hostname=""
+create_ipaddress()
+{
+	local _func="create_ipaddress"
+	local _cmd _message _success
+	local _method
+
+	[ -z "${SUBNET_ID}" -o "${SUBNET_ID}" = "null" ] && stderr 1 "${N1_COLOR}${CBSD_APP} ${_func}: no such subnet id for cidr: ${N2_COLOR}${subnet}${N0_COLOR}"
+	[ -z "${PHP_IPAM_TOKEN}" ] && stderr 1 "${N1_COLOR}${CBSD_APP} ${_func}: empty ${N2_COLOR}${PHP_IPAM_TOKEN}${N0_COLOR}"
+	[ -z "${ip4_addr}" ] && stderr 1 "${N1_COLOR}${CBSD_APP} ${_func}: empty ${N2_COLOR}${ip4_addr}${N0_COLOR}"
+
+	_cmd=$( echo ${CURL_CMD} --no-progress-meter -S -X POST --data \'\{\"note\":\"\'${note}\'\",\"hostname\":\"\'${hostname}\'\",\"description\":\"\'${description}\'\",\"subnetId\":\"\'${SUBNET_ID}\'\",\"ip\":\"\'${ip4_addr}\'\"\}\' ${PHPIPAMURLAPI}/${APPID}/addresses/ --header \'token: ${PHP_IPAM_TOKEN}\' --header \'Content-Type: application/json\' )
+	_res=$( eval ${_cmd} 2>/dev/null )
+
+	_success=$( echo ${_res} | ${JQ_CMD} '.success' )
+
+	if [ "${_success}" != "true" ]; then
+		${ECHO} "${N1_COLOR}${CBSD_APP} ${_func}: create_ipaddress failed${N0_COLOR}" 1>&2
+		${ECHO} "${N1_COLOR}${CBSD_APP} ${_func}: create_ipaddress API query: ${N2_COLOR}${_cmd}${N0_COLOR}" 1>&2
+		_message=$( echo ${_res} | ${JQ_CMD} '.message' )
+		stderr 1 "${N1_COLOR}${CBSD_APP} ${_func}: ${N2_COLOR}${_message}${N0_COLOR}"
+	else
+		# get ID
+		PHP_IPAM_IPADDRESS_ID=$( echo "${_res}" | ${JQ_CMD} '.id' | ${TR_CMD} -d '"' )
+		${ECHO} "${N1_COLOR}${CBSD_APP} ${_func}: ${N2_COLOR}success: ${PHP_IPAM_IPADDRESS_ID}${N0_COLOR}" 1>&2
+	fi
+
+}
+
+get_ipaddress_id()
+{
+	local _func="get_ipaddress_id"
+	local _cmd _message _success
+	local _method
+
+	[ -z "${SUBNET_ID}" -o "${SUBNET_ID}" = "null" ] && stderr 1 "${N1_COLOR}${CBSD_APP} ${_func}: no such subnet id for cidr: ${N2_COLOR}${subnet}${N0_COLOR}"
+
+	[ -z "${PHP_IPAM_TOKEN}" ] && stderr 1 "${N1_COLOR}${CBSD_APP} ${_func}: empty ${N2_COLOR}${PHP_IPAM_TOKEN}${N0_COLOR}"
+	[ -z "${ip4_addr}" ] && stderr 1 "${N1_COLOR}${CBSD_APP} ${_func}: empty ${N2_COLOR}${ip4_addr}${N0_COLOR}"
+	_cmd=$( echo ${CURL_CMD} --no-progress-meter -S -X GET ${PHPIPAMURLAPI}/${APPID}/addresses/${ip4_addr}/${SUBNET_ID}/ --header \'token: ${PHP_IPAM_TOKEN}\' --header \'Content-Type: application/json\' )
+	_res=$( eval ${_cmd} 2>/dev/null )
+	_success=$( echo ${_res} | ${JQ_CMD} '.success' )
+
+	PHP_IPAM_IPADDRESS_ID=
+
+	if [ "${_success}" != "true" ]; then
+		# its not fatal for script, just write message and return empty ID
+		[ "${DEBUG}" = "1" ] && ${ECHO} "${N1_COLOR}${CBSD_APP} ${_func}: get ipaddress failed${N0_COLOR}" 1>&2
+		[ "${DEBUG}" = "1" ] && ${ECHO} "${N1_COLOR}${CBSD_APP} ${_func}: get ipaddress API query: ${N2_COLOR}${_cmd}${N0_COLOR}" 1>&2
+		[ "${DEBUG}" = "1" ] && _message=$( echo ${_res} | ${JQ_CMD} '.message' )
+		[ "${DEBUG}" = "1" ] && ${ECHO} "${N1_COLOR}${CBSD_APP} ${_func}: ${N2_COLOR}${_message}${N0_COLOR}" 1>&2
+		return 1
+	else
+		${ECHO} "${N1_COLOR}${CBSD_APP} ${_func}: ${N2_COLOR}success${N0_COLOR}" 1>&2
+	fi
+
+	PHP_IPAM_IPADDRESS_ID=$( echo "${_res}" | ${JQ_CMD} '.data.id' | ${TR_CMD} -d '"' )
+	[ "${DEBUG}" = "1" ] && ${ECHO} "${N1_COLOR}${CBSD_APP} ${_func}: ${N2_COLOR}PHP_IPAM_IPADDRESS_ID=${PHP_IPAM_IPADDRESS_ID}${N0_COLOR}" 1>&2
+	return 0
+}
+
+delete_ipaddress()
+{
+	local _func="delete_ipaddress"
+	local _cmd _message _success
+	local _method
+
+	[ -z "${PHP_IPAM_IPADDRESS_ID}" ] && stderr 1 "${N1_COLOR}${CBSD_APP} ${_func}: unable to get ${N2_COLOR}PHP_IPAM_IPADDRESS_ID${N0_COLOR}"
+	[ -z "${SUBNET_ID}" -o "${SUBNET_ID}" = "null" ] && stderr 1 "${N1_COLOR}${CBSD_APP} ${_func}: no such SUBNET_ID for CIDR: ${N2_COLOR}${subnet}${N0_COLOR}"
+	[ -z "${PHP_IPAM_TOKEN}" ] && stderr 1 "${N1_COLOR}${CBSD_APP} ${_func}: empty ${N2_COLOR}PHP_IPAM_TOKEN${N0_COLOR}"
+
+	_cmd="${CURL_CMD} --no-progress-meter -S -X DELETE ${PHPIPAMURLAPI}/${APPID}/addresses/${PHP_IPAM_IPADDRESS_ID}/${SUBNET_ID}/ --header 'token: ${PHP_IPAM_TOKEN}'"
+	_res=$( eval ${_cmd} 2>/dev/null )
+
+	_success=$( echo ${_res} | ${JQ_CMD} '.success' )
+
+	if [ "${_success}" != "true" ]; then
+		${ECHO} "${N1_COLOR}${CBSD_APP} ${_func}: delete ipaddress failed${N0_COLOR}" 1>&2
+		${ECHO} "${N1_COLOR}${CBSD_APP} ${_func}: API query: ${N2_COLOR}${_cmd}${N0_COLOR}" 1>&2
+		_message=$( echo ${_res} | ${JQ_CMD} '.message' )
+		stderr 1 "${N1_COLOR}${CBSD_APP} ${_func}: ${N2_COLOR}${_message}${N0_COLOR}"
+	else
+		${ECHO} "${N1_COLOR}${CBSD_APP} ${_func}: ${N2_COLOR}success${N0_COLOR}" 1>&2
+	fi
+}
+
+update_ipaddress()
+{
+	local _func="update_ipaddress"
+	local _cmd _message _success
+	local _method
+
+	[ -z "${PHP_IPAM_IPADDRESS_ID}" ] && stderr 1 "${N1_COLOR}${CBSD_APP} ${_func}: unable to get ${N2_COLOR}PHP_IPAM_IPADDRESS_ID${N0_COLOR}"
+	[ -z "${SUBNET_ID}" -o "${SUBNET_ID}" = "null" ] && stderr 1 "${N1_COLOR}${CBSD_APP} ${_func}: no such SUBNET_ID for CIDR: ${N2_COLOR}${subnet}${N0_COLOR}"
+	[ -z "${PHP_IPAM_TOKEN}" ] && stderr 1 "${N1_COLOR}${CBSD_APP} ${_func}: empty ${N2_COLOR}PHP_IPAM_TOKEN${N0_COLOR}"
+
+	_cmd=$( echo ${CURL_CMD} --no-progress-meter -S -X PATCH --data \'\{\"note\":\"\'${note}\'\",\"hostname\":\"\'${hostname}\'\",\"description\":\"\'${description}\'\"\}\' ${PHPIPAMURLAPI}/${APPID}/addresses/${PHP_IPAM_IPADDRESS_ID}/ --header \'token: ${PHP_IPAM_TOKEN}\' --header \'Content-Type: application/json\' )
+
+	_res=$( eval ${_cmd} 2>/dev/null )
+	_success=$( echo ${_res} | ${JQ_CMD} '.success' )
+
+	if [ "${_success}" != "true" ]; then
+		${ECHO} "${N1_COLOR}${CBSD_APP} ${_func}: update ipaddress failed${N0_COLOR}" 1>&2
+		${ECHO} "${N1_COLOR}${CBSD_APP} ${_func}: API query: ${N2_COLOR}${_cmd}${N0_COLOR}" 1>&2
+		_message=$( echo ${_res} | ${JQ_CMD} '.message' )
+		stderr 1 "${N1_COLOR}${CBSD_APP} ${_func}: ${N2_COLOR}${_message}${N0_COLOR}"
+	else
+		${ECHO} "${N1_COLOR}${CBSD_APP} ${_func}: ${N2_COLOR}success${N0_COLOR}" 1>&2
+	fi
+}
+
+
+# $1 - "lock" to POST/reserve
+get_first_free()
+{
+	local _func="update_ipaddress"
+	local _cmd
+	local _method
+
+	if [ "${1}" = "lock" ]; then
+		_method="POST"
+	else
+		_method="GET"
+	fi
+
+	[ -z "${SUBNET_ID}" -o "${SUBNET_ID}" = "null" ] && stderr 1 "${N1_COLOR}${CBSD_APP} ${_func}: no such SUBNET_ID for CIDR: ${N2_COLOR}${subnet}${N0_COLOR}"
+	[ -z "${PHP_IPAM_TOKEN}" ] && stderr 1 "${N1_COLOR}${CBSD_APP} ${_func}: empty ${N2_COLOR}PHP_IPAM_TOKEN${N0_COLOR}"
+
+	_cmd="${CURL_CMD} --no-progress-meter -S -X ${_method} ${PHPIPAMURLAPI}/${APPID}/addresses/first_free/${SUBNET_ID}/ --header 'token: ${PHP_IPAM_TOKEN}'"
+	ipCreated=$( eval ${_cmd} 2>/dev/null )
+
+	if $( echo ${ipCreated} | ${JQ_CMD} '.success') ;then
+		:
+	else
+		${ECHO} "${N1_COLOR}${CBSD_APP} ${_func}: first_free ipaddress failed${N0_COLOR}" 1>&2
+		${ECHO} "${N1_COLOR}${CBSD_APP} ${_func}: API query: ${N2_COLOR}${_cmd}${N0_COLOR}" 1>&2
+		_message=$( echo ${_res} | ${JQ_CMD} '.message' )
+		stderr 1 "${N1_COLOR}${CBSD_APP} ${_func}: ${N2_COLOR}${_message}${N0_COLOR}"
+	fi
+
+	PHP_IPAM_IPADDRESS=$( echo ${ipCreated} | ${JQ_CMD} '.data' | ${TR_CMD} -d '"')
+
+	[ -z "${PHP_IPAM_IPADDRESS}" ] && stderr 1 "${N1_COLOR}${CBSD_APP} ${_func}: unable to get IP${N0_COLOR}"
+
+	${ECHO} "${N1_COLOR}${CBSD_APP} ${_func}: ${N2_COLOR}success${N0_COLOR}" 1>&2
+	echo "${PHP_IPAM_IPADDRESS}"
+	return 0
+}

@@ -1,0 +1,132 @@
+#!/usr/local/bin/cbsd
+MYARG="mode"
+MYOPTARG="description ip4_addr mode note servername subnet debug"
+MYDESC="Operate with PHPIPAM API"
+CBSDMODULE="sys"
+ADDHELP="\
+ description - for mode=modify/create: description for ip, e.g: description=\"jail\"\n\
+ hostname    - for modify/create: name of the host, e.g: hostname=\"jail1.my.domain\"\n\
+ ip4_addr    - for mode=modify/create/delete: IP address, e.g: ip4_address=\"10.0.0.3\"\n\
+ mode:\n\
+   - create        : to create new IP address (subnet is required);\n\
+   - delete        : to delete IP address (subnet is required);\n\
+   - firstfree     : get next first free IP address, no reservation/create (subnet is required);\n\
+   - firstfreelock : get next first free IP address and create/reserve (subnet is required);\n\
+   - update        : to update ( + create if not exist ) IP address/data (subnet is required);\n\
+ note        - for mode=modify/create: notes for ip, e.g hostname of CBSD hoster: note=\"node01\"\n\
+ subnet      - work with subnet/CIDR, should exist in phpipam, e.g: subnet=\"10.0.1.0/24\"\n\
+
+Examples:
+  cbsd ipam mode=create subnet=10.0.1.0/24 ip4_addr=10.0.1.50 description=\"jail\" note=\"srv-01.my.domain\" hostname=\"jail1.my.domain\"\n\
+  cbsd ipam mode=delete subnet=10.0.1.0/24 ip4_addr=10.0.1.50\n\
+  cbsd ipam mode=firstfree subnet=10.0.1.0/24\n\
+"
+EXTHELP=
+
+. ${subr}
+
+description=
+hostname=
+ip4_addr=
+mode=
+note=
+subnet=
+DEBUG=0
+
+. ${cbsdinit}
+[ -n "${debug}" ] && odebug="${debug}"
+. ${system}
+. ${strings}
+
+readconf ipam.conf
+
+# overwrite debug by args
+[ -n "${odebug}" ] && DEBUG="${odebug}"
+
+set -e
+. ${distmoduledir}/ipam.d/ipam.subr
+set +e
+
+CURL_CMD="/usr/local/bin/curl"
+JQ_CMD="/usr/local/bin/jq"
+
+[ ! -x ${JQ_CMD} ] && stderr 1 "${N1_COLOR}${CBSD_APP} error: no such jq, please install it first: ${N2_COLOR}pkg install -y textproc/jq${N0_COLOR}"
+[ ! -x ${CURL_CMD} ] && stderr 1 "${N1_COLOR}${CBSD_APP} error: no such curl, please install it first: ${N2_COLOR}pkg install -y ftp/curl${N0_COLOR}"
+
+for i in PHPIPAMURL PHPIPAMURLAPI USER PASS APPID; do
+	_val=
+	eval _val="\$$i"
+	if [ -z "${_val}" ]; then
+		${ECHO} "${N1_COLOR}${CBSD_APP}: ${N2_COLOR}${i}= ${N1_COLOR}is mandatory, please install and edit ipam.conf:${N0_COLOR}" 1>&2
+		stderr 1 "  cp ${distmoduledir}/ipam.d/etc/ipam.conf ${workdir}/etc/"
+	fi
+done
+
+case "${mode}" in
+	create)
+		for i in subnet ip4_addr; do
+			_val=
+			eval _val="\$$i"
+			[ -z "${_val}" ] && stderr 1 "${N1_COLOR}${CBSD_APP}: ${N2_COLOR}${i}= ${N1_COLOR}is mandatory${N0_COLOR}"
+		done
+
+		get_token
+		get_subnet_id
+		create_ipaddress
+		;;
+	delete)
+		for i in subnet ip4_addr; do
+			_val=
+			eval _val="\$$i"
+			[ -z "${_val}" ] && stderr 1 "${N1_COLOR}${CBSD_APP}: ${N2_COLOR}${i}= ${N1_COLOR}is mandatory${N0_COLOR}"
+		done
+
+		get_token
+		get_subnet_id
+		get_ipaddress_id
+		delete_ipaddress
+		;;
+	update)
+		for i in subnet ip4_addr; do
+			_val=
+			eval _val="\$$i"
+			[ -z "${_val}" ] && stderr 1 "${N1_COLOR}${CBSD_APP}: ${N2_COLOR}${i}= ${N1_COLOR}is mandatory${N0_COLOR}"
+		done
+
+		get_token
+		get_subnet_id
+		get_ipaddress_id
+		if [ -z "${PHP_IPAM_IPADDRESS_ID}" ]; then
+			${ECHO} "${N1_COLOR}${CBSD_APP}: IP address not exist, create...: ${N2_COLOR}${ip4_addr}${N0_COLOR}" 1>&2
+			create_ipaddress
+		fi
+		update_ipaddress
+		;;
+	firstfree)
+		for i in subnet; do
+			_val=
+			eval _val="\$$i"
+			[ -z "${_val}" ] && stderr 1 "${N1_COLOR}${CBSD_APP}: ${N2_COLOR}${i}= ${N1_COLOR}is mandatory${N0_COLOR}"
+		done
+
+		get_token
+		get_subnet_id
+		get_first_free
+		;;
+	firstfreelock)
+		for i in subnet; do
+			_val=
+			eval _val="\$$i"
+			[ -z "${_val}" ] && stderr 1 "${N1_COLOR}${CBSD_APP}: ${N2_COLOR}${i}= ${N1_COLOR}is mandatory${N0_COLOR}"
+		done
+
+		get_token
+		get_subnet_id
+		get_first_free lock
+		;;
+	*)
+		err 1 "${N1_COLOR}${CBSD_APP}: unknown mode: ${N2_COLOR}${mode}${N0_COLOR}"
+		;;
+esac
+
+exit 0
