@@ -3,7 +3,7 @@ get_token()
 {
 	local _func="get_token"
 	local _ret _res
-	local _cmd="${CURL_CMD} --no-progress-meter -s -X POST --user ${USER}:${PASS} ${PHPIPAMURLAPI}/${APPID}/user/"
+	local _cmd="${CURL_CMD} --no-progress-meter --connect-timeout 6 -s -X POST --user ${USER}:${PASS} ${PHPIPAMURLAPI}/${APPID}/user/"
 
 	_res=$( ${_cmd} 2>/dev/null )
 	_ret=$?
@@ -23,7 +23,7 @@ get_subnet_id()
 {
 	local _func="get_subnet_id"
 	local _ret _res
-	local _cmd="${CURL_CMD} --no-progress-meter -S -X GET ${PHPIPAMURLAPI}/${APPID}/subnets/cidr/${subnet}/ --header 'token: ${PHP_IPAM_TOKEN}'"
+	local _cmd="${CURL_CMD} --no-progress-meter --connect-timeout 6 -S -X GET ${PHPIPAMURLAPI}/${APPID}/subnets/cidr/${subnet}/ --header 'token: ${PHP_IPAM_TOKEN}'"
 
 	[ -z "${PHP_IPAM_TOKEN}" ] && stderr 1 "${N1_COLOR}${CBSD_APP} ${_func}: empty ${N2_COLOR}PHP_IPAM_TOKEN${N0_COLOR}"
 
@@ -53,7 +53,7 @@ create_ipaddress()
 	[ -z "${PHP_IPAM_TOKEN}" ] && stderr 1 "${N1_COLOR}${CBSD_APP} ${_func}: empty ${N2_COLOR}${PHP_IPAM_TOKEN}${N0_COLOR}"
 	[ -z "${ip4_addr}" ] && stderr 1 "${N1_COLOR}${CBSD_APP} ${_func}: empty ${N2_COLOR}${ip4_addr}${N0_COLOR}"
 
-	_cmd=$( echo ${CURL_CMD} --no-progress-meter -S -X POST --data \'\{\"note\":\"\'${note}\'\",\"hostname\":\"\'${hostname}\'\",\"description\":\"\'${description}\'\",\"subnetId\":\"\'${SUBNET_ID}\'\",\"ip\":\"\'${ip4_addr}\'\"\}\' ${PHPIPAMURLAPI}/${APPID}/addresses/ --header \'token: ${PHP_IPAM_TOKEN}\' --header \'Content-Type: application/json\' )
+	_cmd=$( echo ${CURL_CMD} --no-progress-meter --connect-timeout 6 -S -X POST --data \'\{\"note\":\"\'${note}\'\",\"hostname\":\"\'${hostname}\'\",\"description\":\"\'${description}\'\",\"subnetId\":\"\'${SUBNET_ID}\'\",\"ip\":\"\'${ip4_addr}\'\"\}\' ${PHPIPAMURLAPI}/${APPID}/addresses/ --header \'token: ${PHP_IPAM_TOKEN}\' --header \'Content-Type: application/json\' )
 	_res=$( eval ${_cmd} 2>/dev/null )
 
 	_success=$( echo ${_res} | ${JQ_CMD} '.success' )
@@ -81,7 +81,7 @@ get_ipaddress_id()
 
 	[ -z "${PHP_IPAM_TOKEN}" ] && stderr 1 "${N1_COLOR}${CBSD_APP} ${_func}: empty ${N2_COLOR}${PHP_IPAM_TOKEN}${N0_COLOR}"
 	[ -z "${ip4_addr}" ] && stderr 1 "${N1_COLOR}${CBSD_APP} ${_func}: empty ${N2_COLOR}${ip4_addr}${N0_COLOR}"
-	_cmd=$( echo ${CURL_CMD} --no-progress-meter -S -X GET ${PHPIPAMURLAPI}/${APPID}/addresses/${ip4_addr}/${SUBNET_ID}/ --header \'token: ${PHP_IPAM_TOKEN}\' --header \'Content-Type: application/json\' )
+	_cmd=$( echo ${CURL_CMD} --no-progress-meter --connect-timeout 6 -S -X GET ${PHPIPAMURLAPI}/${APPID}/addresses/${ip4_addr}/${SUBNET_ID}/ --header \'token: ${PHP_IPAM_TOKEN}\' --header \'Content-Type: application/json\' )
 	_res=$( eval ${_cmd} 2>/dev/null )
 	_success=$( echo ${_res} | ${JQ_CMD} '.success' )
 
@@ -113,7 +113,7 @@ delete_ipaddress()
 	[ -z "${SUBNET_ID}" -o "${SUBNET_ID}" = "null" ] && stderr 1 "${N1_COLOR}${CBSD_APP} ${_func}: no such SUBNET_ID for CIDR: ${N2_COLOR}${subnet}${N0_COLOR}"
 	[ -z "${PHP_IPAM_TOKEN}" ] && stderr 1 "${N1_COLOR}${CBSD_APP} ${_func}: empty ${N2_COLOR}PHP_IPAM_TOKEN${N0_COLOR}"
 
-	_cmd="${CURL_CMD} --no-progress-meter -S -X DELETE ${PHPIPAMURLAPI}/${APPID}/addresses/${PHP_IPAM_IPADDRESS_ID}/${SUBNET_ID}/ --header 'token: ${PHP_IPAM_TOKEN}'"
+	_cmd="${CURL_CMD} --no-progress-meter --connect-timeout 6 -S -X DELETE ${PHPIPAMURLAPI}/${APPID}/addresses/${PHP_IPAM_IPADDRESS_ID}/${SUBNET_ID}/ --header 'token: ${PHP_IPAM_TOKEN}'"
 	_res=$( eval ${_cmd} 2>/dev/null )
 
 	_success=$( echo ${_res} | ${JQ_CMD} '.success' )
@@ -138,7 +138,7 @@ update_ipaddress()
 	[ -z "${SUBNET_ID}" -o "${SUBNET_ID}" = "null" ] && stderr 1 "${N1_COLOR}${CBSD_APP} ${_func}: no such SUBNET_ID for CIDR: ${N2_COLOR}${subnet}${N0_COLOR}"
 	[ -z "${PHP_IPAM_TOKEN}" ] && stderr 1 "${N1_COLOR}${CBSD_APP} ${_func}: empty ${N2_COLOR}PHP_IPAM_TOKEN${N0_COLOR}"
 
-	_cmd=$( echo ${CURL_CMD} --no-progress-meter -S -X PATCH --data \'\{\"note\":\"\'${note}\'\",\"hostname\":\"\'${hostname}\'\",\"description\":\"\'${description}\'\"\}\' ${PHPIPAMURLAPI}/${APPID}/addresses/${PHP_IPAM_IPADDRESS_ID}/ --header \'token: ${PHP_IPAM_TOKEN}\' --header \'Content-Type: application/json\' )
+	_cmd=$( echo ${CURL_CMD} --no-progress-meter --connect-timeout 6 -S -X PATCH --data \'\{\"note\":\"\'${note}\'\",\"hostname\":\"\'${hostname}\'\",\"description\":\"\'${description}\'\"\}\' ${PHPIPAMURLAPI}/${APPID}/addresses/${PHP_IPAM_IPADDRESS_ID}/ --header \'token: ${PHP_IPAM_TOKEN}\' --header \'Content-Type: application/json\' )
 
 	_res=$( eval ${_cmd} 2>/dev/null )
 	_success=$( echo ${_res} | ${JQ_CMD} '.success' )
@@ -170,7 +170,7 @@ get_first_free()
 	[ -z "${SUBNET_ID}" -o "${SUBNET_ID}" = "null" ] && stderr 1 "${N1_COLOR}${CBSD_APP} ${_func}: no such SUBNET_ID for CIDR: ${N2_COLOR}${subnet}${N0_COLOR}"
 	[ -z "${PHP_IPAM_TOKEN}" ] && stderr 1 "${N1_COLOR}${CBSD_APP} ${_func}: empty ${N2_COLOR}PHP_IPAM_TOKEN${N0_COLOR}"
 
-	_cmd="${CURL_CMD} --no-progress-meter -S -X ${_method} ${PHPIPAMURLAPI}/${APPID}/addresses/first_free/${SUBNET_ID}/ --header 'token: ${PHP_IPAM_TOKEN}'"
+	_cmd="${CURL_CMD} --no-progress-meter --connect-timeout 6 -S -X ${_method} ${PHPIPAMURLAPI}/${APPID}/addresses/first_free/${SUBNET_ID}/ --header 'token: ${PHP_IPAM_TOKEN}'"
 	ipCreated=$( eval ${_cmd} 2>/dev/null )
 
 	if $( echo ${ipCreated} | ${JQ_CMD} '.success') ;then
