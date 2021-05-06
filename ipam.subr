@@ -5,8 +5,9 @@ get_token()
 	local _ret _res
 	local _cmd="${TIMEOUT_CMD} -s KILL 6 ${CURL_CMD} --no-progress-meter --connect-timeout 5 -s -X POST --user ${USER}:${PASS} ${PHPIPAMURLAPI}/${APPID}/user/"
 
-	_res=$( ${_cmd} 2>/dev/null )
+	_res=$( ${_cmd} 2>&1 )
 	_ret=$?
+	echo "${_res}" >> /tmp/f.txt
 	if [ ${_ret} -ne 0 ]; then
 		${ECHO} "${N1_COLOR}${CBSD_APP} ${_func}: cmd failed: ${N2_COLOR}${_cmd}${N0_COLOR}" 1>&2
 		stderr ${_ret} "${_res}"
