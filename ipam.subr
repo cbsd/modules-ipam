@@ -7,7 +7,6 @@ get_token()
 
 	_res=$( ${_cmd} 2>&1 )
 	_ret=$?
-	echo "${_res}" >> /tmp/f.txt
 	if [ ${_ret} -ne 0 ]; then
 		${ECHO} "${N1_COLOR}${CBSD_APP} ${_func}: cmd failed: ${N2_COLOR}${_cmd}${N0_COLOR}" 1>&2
 		stderr ${_ret} "${_res}"
