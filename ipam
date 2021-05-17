@@ -1,26 +1,42 @@
 #!/usr/local/bin/cbsd
 MYARG="mode"
-MYOPTARG="description ip4_addr mode note servername subnet debug"
+MYOPTARG="description ip4_addr mode note servername subnet debug hostname"
 MYDESC="Operate with PHPIPAM API"
 CBSDMODULE="sys"
 ADDHELP="\
- description - for mode=modify/create: description for ip, e.g: description=\"jail\"\n\
- hostname    - for modify/create: name of the host, e.g: hostname=\"jail1.my.domain\"\n\
- ip4_addr    - for mode=modify/create/delete: IP address, e.g: ip4_address=\"10.0.0.3\"\n\
- mode:\n\
-   - create        : to create new IP address (subnet is required);\n\
-   - delete        : to delete IP address (subnet is required);\n\
-   - firstfree     : get next first free IP address, no reservation/create (subnet is required);\n\
-   - firstfreelock : get next first free IP address and create/reserve (subnet is required);\n\
-   - update        : to update ( + create if not exist ) IP address/data (subnet is required);\n\
- note        - for mode=modify/create: notes for ip, e.g hostname of CBSD hoster: note=\"node01\"\n\
- subnet      - work with subnet/CIDR, should exist in phpipam, e.g: subnet=\"10.0.1.0/24\"\n\
 
-Examples:
-  cbsd ipam mode=create subnet=10.0.1.0/24 ip4_addr=10.0.1.50 description=\"jail\" note=\"srv-01.my.domain\" hostname=\"jail1.my.domain\"\n\
-  cbsd ipam mode=delete subnet=10.0.1.0/24 ip4_addr=10.0.1.50\n\
-  cbsd ipam mode=firstfree subnet=10.0.1.0/24\n\
+${H3_COLOR}Description${N0_COLOR}:
+
+CBSD integration with PHPIPAM module
+see: https://www.bsdstore.ru/en/13.0.x/wf_ipam_ssi.html
+
+${H3_COLOR}Options${N0_COLOR}:
+
+ ${N2_COLOR}description=${N0_COLOR} - for mode=modify/create: description for ip,
+                e.g: description=\"jail\".
+ ${N2_COLOR}hostname=${N0_COLOR}    - for modify/create: name of the host,
+                e.g: hostname=\"jail1.my.domain\".
+ ${N2_COLOR}ip4_addr=${N0_COLOR}    - for mode=modify/create/delete: IP address,
+                e.g: ip4_address=\"10.0.0.3\".
+ ${N2_COLOR}mode=${N0_COLOR}        - action:
+   - create        : to create new IP address (subnet is required);
+   - delete        : to delete IP address (subnet is required);
+   - firstfree     : get next first free IP address, no reservation/create (subnet is required);
+   - firstfreelock : get next first free IP address and create/reserve (subnet is required);
+   - update        : to update ( + create if not exist ) IP address/data (subnet is required);
+ ${N2_COLOR}note=${N0_COLOR}        - for mode=modify/create: notes for ip,
+                e.g hostname of CBSD hoster: note=\"node01\".
+ ${N2_COLOR}subnet=${N0_COLOR}      - work with subnet/CIDR, should exist in phpipam,
+                e.g: subnet=\"10.0.1.0/24\".
+
+${H3_COLOR}Examples${N0_COLOR}:
+
+ # cbsd ipam mode=create subnet=10.0.1.0/24 ip4_addr=10.0.1.50 description=\"jail\" note=\"srv-01.my.domain\" hostname=\"jail1.my.domain\"
+ # cbsd ipam mode=delete subnet=10.0.1.0/24 ip4_addr=10.0.1.50
+ # cbsd ipam mode=firstfree subnet=10.0.1.0/24
+
 "
+
 EXTHELP=
 
 . ${subr}
@@ -64,7 +80,7 @@ done
 
 case "${mode}" in
 	create)
-		for i in subnet ip4_addr; do
+		for i in subnet ip4_addr hostname; do
 			_val=
 			eval _val="\$$i"
 			[ -z "${_val}" ] && stderr 1 "${N1_COLOR}${CBSD_APP}: ${N2_COLOR}${i}= ${N1_COLOR}is mandatory${N0_COLOR}"
@@ -87,12 +103,11 @@ case "${mode}" in
 		delete_ipaddress
 		;;
 	update)
-		for i in subnet ip4_addr; do
+		for i in subnet ip4_addr hostname; do
 			_val=
 			eval _val="\$$i"
 			[ -z "${_val}" ] && stderr 1 "${N1_COLOR}${CBSD_APP}: ${N2_COLOR}${i}= ${N1_COLOR}is mandatory${N0_COLOR}"
 		done
-
 		get_token
 		get_subnet_id
 		get_ipaddress_id
