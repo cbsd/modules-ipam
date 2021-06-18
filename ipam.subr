@@ -184,7 +184,7 @@ get_first_free()
 
 	PHP_IPAM_IPADDRESS=$( echo ${ipCreated} | ${JQ_CMD} '.data' | ${TR_CMD} -d '"')
 
-	[ -z "${PHP_IPAM_IPADDRESS}" ] && stderr 1 "${N1_COLOR}${CBSD_APP} ${_func}: unable to get IP${N0_COLOR}"
+	[ -z "${PHP_IPAM_IPADDRESS}" ] && stderr 1 "${N1_COLOR}${CBSD_APP} ${_func}: unable to get IP [${_cmd}]${N0_COLOR}"
 
 	${ECHO} "${N1_COLOR}${CBSD_APP} ${_func}: ${N2_COLOR}success${N0_COLOR}" 1>&2
 	echo "${PHP_IPAM_IPADDRESS}"
