@@ -3,12 +3,11 @@ get_token()
 {
 	local _func="get_token"
 	local _ret _res
-	local _cmd="${TIMEOUT_CMD} -s KILL 6 ${CURL_CMD} -H \"Content-Type: application/json\" --no-progress-meter --connect-timeout 5 -s -X POST --user ${USER}:${PASS} ${PHPIPAMURLAPI}/${APPID}/user/"
 
-	_res=$( ${_cmd} 2>&1 )
+	_res=$( ${TIMEOUT_CMD} -s KILL 6 ${CURL_CMD} -H "Content-Type: application/json" --no-progress-meter --connect-timeout 5 -s -X POST --user ${USER}:${PASS} ${PHPIPAMURLAPI}/${APPID}/user/ 2>&1 )
 	_ret=$?
 	if [ ${_ret} -ne 0 ]; then
-		${ECHO} "${N1_COLOR}${CBSD_APP} ${_func}: cmd failed: ${N2_COLOR}${_cmd}${N0_COLOR}" 1>&2
+		${ECHO} "${N1_COLOR}${CBSD_APP} ${_func}: cmd failed: ${N2_COLOR}${TIMEOUT_CMD} -s KILL 6 ${CURL_CMD} -H \"Content-Type: application/json\" --no-progress-meter --connect-timeout 5 -s -X POST --user ${USER}:${PASS} ${PHPIPAMURLAPI}/${APPID}/user/${N0_COLOR}" 1>&2
 		stderr ${_ret} "${_res}"
 	fi
 
@@ -53,7 +52,7 @@ create_ipaddress()
 	[ -z "${PHP_IPAM_TOKEN}" ] && stderr 1 "${N1_COLOR}${CBSD_APP} ${_func}: empty ${N2_COLOR}${PHP_IPAM_TOKEN}${N0_COLOR}"
 	[ -z "${ip4_addr}" ] && stderr 1 "${N1_COLOR}${CBSD_APP} ${_func}: empty ${N2_COLOR}${ip4_addr}${N0_COLOR}"
 
-	_cmd=$( echo ${TIMEOUT_CMD} -s KILL 6 ${CURL_CMD} -H \"Content-Type: application/json\" --no-progress-meter --connect-timeout 5 -S -X POST --data \'\{\"note\":\"\'${note}\'\",\"hostname\":\"\'${hostname}\'\",\"description\":\"\'${description}\'\",\"subnetId\":\"\'${SUBNET_ID}\'\",\"ip\":\"\'${ip4_addr}\'\"\}\' ${PHPIPAMURLAPI}/${APPID}/addresses/ --header \'token: ${PHP_IPAM_TOKEN}\' --header \'Content-Type: application/json\' )
+	_cmd=$( echo ${TIMEOUT_CMD} -s KILL 6 ${CURL_CMD} -H "Content-Type: application/json" --no-progress-meter --connect-timeout 5 -S -X POST --data \'\{\"note\":\"\'${note}\'\",\"hostname\":\"\'${hostname}\'\",\"description\":\"\'${description}\'\",\"subnetId\":\"\'${SUBNET_ID}\'\",\"ip\":\"\'${ip4_addr}\'\"\}\' ${PHPIPAMURLAPI}/${APPID}/addresses/ --header \'token: ${PHP_IPAM_TOKEN}\' --header \'Content-Type: application/json\' )
 	_res=$( eval ${_cmd} 2>/dev/null )
 
 	_success=$( echo ${_res} | ${JQ_CMD} '.success' )
@@ -81,7 +80,7 @@ get_ipaddress_id()
 
 	[ -z "${PHP_IPAM_TOKEN}" ] && stderr 1 "${N1_COLOR}${CBSD_APP} ${_func}: empty ${N2_COLOR}${PHP_IPAM_TOKEN}${N0_COLOR}"
 	[ -z "${ip4_addr}" ] && stderr 1 "${N1_COLOR}${CBSD_APP} ${_func}: empty ${N2_COLOR}${ip4_addr}${N0_COLOR}"
-	_cmd=$( echo ${TIMEOUT_CMD} -s KILL 6 ${CURL_CMD} -H \"Content-Type: application/json\" --no-progress-meter --connect-timeout 5 -S -X GET ${PHPIPAMURLAPI}/${APPID}/addresses/${ip4_addr}/${SUBNET_ID}/ --header \'token: ${PHP_IPAM_TOKEN}\' --header \'Content-Type: application/json\' )
+	_cmd=$( echo ${TIMEOUT_CMD} -s KILL 6 ${CURL_CMD} -H "Content-Type: application/json" --no-progress-meter --connect-timeout 5 -S -X GET ${PHPIPAMURLAPI}/${APPID}/addresses/${ip4_addr}/${SUBNET_ID}/ --header \'token: ${PHP_IPAM_TOKEN}\' --header \'Content-Type: application/json\' )
 	_res=$( eval ${_cmd} 2>/dev/null )
 	_success=$( echo ${_res} | ${JQ_CMD} '.success' )
 
