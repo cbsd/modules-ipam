@@ -112,7 +112,7 @@ delete_ipaddress()
 	[ -z "${SUBNET_ID}" -o "${SUBNET_ID}" = "null" ] && stderr 1 "${N1_COLOR}${CBSD_APP} ${_func}: no such SUBNET_ID for CIDR: ${N2_COLOR}${subnet}${N0_COLOR}"
 	[ -z "${PHP_IPAM_TOKEN}" ] && stderr 1 "${N1_COLOR}${CBSD_APP} ${_func}: empty ${N2_COLOR}PHP_IPAM_TOKEN${N0_COLOR}"
 
-	_cmd="${TIMEOUT_CMD} -s KILL 6 ${CURL_CMD} --no-progress-meter --connect-timeout 5 -S -X DELETE ${PHPIPAMURLAPI}/${APPID}/addresses/${PHP_IPAM_IPADDRESS_ID}/${SUBNET_ID}/ --header 'token: ${PHP_IPAM_TOKEN}'"
+	_cmd="${TIMEOUT_CMD} -s KILL 6 ${CURL_CMD} -H \"Content-Type: application/json\" --no-progress-meter --connect-timeout 5 -S -X DELETE ${PHPIPAMURLAPI}/${APPID}/addresses/${PHP_IPAM_IPADDRESS_ID}/${SUBNET_ID}/ --header 'token: ${PHP_IPAM_TOKEN}'"
 	_res=$( eval ${_cmd} 2>/dev/null )
 
 	_success=$( echo ${_res} | ${JQ_CMD} '.success' )
